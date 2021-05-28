@@ -93,7 +93,7 @@ int main(void)
   MX_USART1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,9 +107,56 @@ int main(void)
   /* USER CODE END 3 */
 }
 
+void soft_uart_tx()
+{
+  static unsigned char cycle_counter = 0;
+  static unsigned char mask = 1;
+  static unsigned char byte_tx;
+  static unsigned char symbol_counter = 0;
+  static unsigned char message[] = "Hello World!";
+  unsigned char state = 0;
 
-void soft_uart_tx() {
-  HAL_GPIO_TogglePin(SOFT_UART_TX_GPIO_Port, SOFT_UART_TX_Pin);
+  switch (cycle_counter)
+  {
+  case 0:
+    state = 0;
+    byte_tx = message[symbol_counter];
+
+    if (!byte_tx)
+    {
+      symbol_counter = 0;
+    }
+
+    break;
+
+  case 9:
+  case 10:
+    state = 1;
+    break;
+
+  default:
+    if (byte_tx & mask)
+    {
+      state = 1;
+    }
+    else
+    {
+      state = 0;
+    }
+
+    mask <<= 1;
+  }
+
+  HAL_GPIO_WritePin(SOFT_UART_TX_GPIO_Port, SOFT_UART_TX_Pin, state);
+
+  cycle_counter++;
+
+  if (cycle_counter > 10)
+  {
+    cycle_counter = 0;
+    mask = 1;
+    symbol_counter++;
+  }
 }
 
 /**
@@ -137,8 +184,7 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -171,7 +217,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 30000;
+  htim2.Init.Period = 625; // Bitrate 115200
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -192,7 +238,6 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
-
 }
 
 /**
@@ -226,7 +271,6 @@ static void MX_USART1_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
 }
 
 /**
@@ -263,7 +307,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SOFT_UART_TX_GPIO_Port, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
@@ -282,7 +325,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
