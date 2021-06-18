@@ -45,6 +45,21 @@ TIM_HandleTypeDef htim2;
 USART_HandleTypeDef husart1;
 
 /* USER CODE BEGIN PV */
+typedef struct __soft_tx
+{
+  uint8_t *buffer;
+  uint16_t buffer_size;
+  uint8_t *read_pt;
+  uint8_t *write_pt;
+  uint8_t start;
+  uint8_t end;
+} soft_tx;
+
+soft_tx suart;
+
+int soft_uart_init(soft_tx *suart);
+int soft_uart_tx_byte(uint8_t symbol);
+void soft_uart_write(soft_tx *suart, uint8_t *string, uint16_t string_size);
 
 /* USER CODE END PV */
 
@@ -59,6 +74,47 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+int soft_uart_init(soft_tx *suart)
+{
+  suart->buffer_size = 100;
+
+  uint8_t *ptr = malloc(suart->buffer_size);
+
+  if (ptr == NULL)
+  {
+    return -1;
+  }
+  else
+  {
+    suart->buffer = suart->read_pt = suart->write_pt = ptr;
+    suart->start = suart->end = 0;
+    return 0;
+  }
+}
+
+void soft_uart_write(soft_tx *suart, uint8_t *string, uint16_t string_size)
+{
+  for (; string_size > 0; string_size--)
+  {
+    if (suart->write_pt > (suart->start + suart->buffer_size))
+    {
+      suart->write_pt = suart->start;
+    }
+
+    *suart->write_pt = *string;
+
+    if (*string == 0)
+    {
+      break;
+    }
+
+    string++;
+    suart->write_pt++;
+  }
+
+  suart->start = 1;
+}
 
 /* USER CODE END 0 */
 
@@ -94,11 +150,15 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
-  
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  
+  soft_uart_init(&suart);
+  soft_uart_write(&suart, "Hello!", 7);
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -115,24 +175,39 @@ void soft_uart_rx_start(void)
 
 void soft_uart_tx(void)
 {
+  if (suart.start)
+  {
+    if (soft_uart_tx_byte(suart.read_pt[0]))
+    {
+      if (suart.read_pt == suart.write_pt)
+      {
+        suart.start = 0;
+        return;
+      }
+      else
+      {
+        if (suart.read_pt > (suart.start + suart.buffer_size))
+        {
+          suart.read_pt = suart.start;
+        }
+        suart.read_pt++;
+      }
+    }
+  }
+}
+
+int soft_uart_tx_byte(uint8_t symbol)
+{
   static unsigned char cycle_counter = 0;
   static unsigned char mask = 1;
   static unsigned char byte_tx;
-  static unsigned char symbol_counter = 0;
-  static unsigned char message[] = "Hello World!";
   unsigned char state = 0;
 
   switch (cycle_counter)
   {
   case 0:
     state = 0;
-    byte_tx = message[symbol_counter];
-
-    if (!byte_tx)
-    {
-      symbol_counter = 0;
-    }
-
+    byte_tx = symbol;
     break;
 
   case 9:
@@ -161,7 +236,11 @@ void soft_uart_tx(void)
   {
     cycle_counter = 0;
     mask = 1;
-    symbol_counter++;
+    return 1;
+  }
+  else
+  {
+    return 0;
   }
 }
 
