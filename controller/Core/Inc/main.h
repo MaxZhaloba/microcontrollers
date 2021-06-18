@@ -54,6 +54,8 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void soft_uart_tx(void);
+void soft_uart_rx_start(void);
 
 /* USER CODE END EFP */
 
@@ -61,7 +63,9 @@ void Error_Handler(void);
 #define LED_Pin GPIO_PIN_13
 #define LED_GPIO_Port GPIOC
 #define SOFT_UART_TX_Pin GPIO_PIN_12
+#define SOFT_UART_RX_Pin GPIO_PIN_13
 #define SOFT_UART_TX_GPIO_Port GPIOB
+#define SOFT_UART_RX_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

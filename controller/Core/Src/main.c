@@ -94,6 +94,7 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -107,7 +108,12 @@ int main(void)
   /* USER CODE END 3 */
 }
 
-void soft_uart_tx()
+void soft_uart_rx_start(void)
+{
+  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+}
+
+void soft_uart_tx(void)
 {
   static unsigned char cycle_counter = 0;
   static unsigned char mask = 1;
@@ -307,6 +313,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SOFT_UART_TX_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SOFT_UART_RX_Pin */
+  GPIO_InitStruct.Pin = SOFT_UART_RX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SOFT_UART_RX_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
