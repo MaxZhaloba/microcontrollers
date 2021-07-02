@@ -63,8 +63,8 @@ void soft_uart_rx_start(void);
 #define LED_Pin GPIO_PIN_13
 #define LED_GPIO_Port GPIOC
 #define SOFT_UART_TX_Pin GPIO_PIN_12
-#define SOFT_UART_RX_Pin GPIO_PIN_13
 #define SOFT_UART_TX_GPIO_Port GPIOB
+#define SOFT_UART_RX_Pin GPIO_PIN_13
 #define SOFT_UART_RX_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 

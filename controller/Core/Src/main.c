@@ -40,10 +40,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi1;
+
 TIM_HandleTypeDef htim2;
 
 USART_HandleTypeDef husart1;
 
+DMA_HandleTypeDef hdma_memtomem_dma1_channel1;
 /* USER CODE BEGIN PV */
 typedef struct __soft_tx
 {
@@ -66,8 +69,10 @@ void soft_uart_write(soft_tx *suart, uint8_t *string, uint16_t string_size);
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USART1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -146,8 +151,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_Init();
   MX_TIM2_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
 
@@ -155,93 +162,38 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  
-  soft_uart_init(&suart);
-  soft_uart_write(&suart, "Hello!", 7);
 
-  while (1)
+  // soft_uart_init(&suart);
+  // soft_uart_write(&suart, "Hello!", 7);
+
+  uint32_t buffer_size = 100;
+
+  char *src = malloc(buffer_size);
+  char *dest = malloc(buffer_size);
+
+  for (char i = 0; i < buffer_size; i++)
+  {
+    src[i] = i;
+  }
+
+  // DMA_HandleTypeDef hdma_memtomem_dma1_channel1;
+  // HAL_StatusTypeDef HAL_DMA_Start(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t DataLength)
+
+  HAL_DMA_Start(&hdma_memtomem_dma1_channel1, src, dest, buffer_size);
+
+  char msg[] = "Hello World!\r\n";
+
+while (1)
   {
     /* USER CODE END WHILE */
+    // printf("Hello World!\n");
+    // HAL_USART_Transmit(&husart1, msg, 13, 500);
+    // HAL_USART_Transmit_IT(&husart1, msg, 15);
 
+    HAL_USART_Transmit_IT(&husart1, dest, buffer_size);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
-}
-
-void soft_uart_rx_start(void)
-{
-  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-}
-
-void soft_uart_tx(void)
-{
-  if (suart.start)
-  {
-    if (soft_uart_tx_byte(suart.read_pt[0]))
-    {
-      if (suart.read_pt == suart.write_pt)
-      {
-        suart.start = 0;
-        return;
-      }
-      else
-      {
-        if (suart.read_pt > (suart.start + suart.buffer_size))
-        {
-          suart.read_pt = suart.start;
-        }
-        suart.read_pt++;
-      }
-    }
-  }
-}
-
-int soft_uart_tx_byte(uint8_t symbol)
-{
-  static unsigned char cycle_counter = 0;
-  static unsigned char mask = 1;
-  static unsigned char byte_tx;
-  unsigned char state = 0;
-
-  switch (cycle_counter)
-  {
-  case 0:
-    state = 0;
-    byte_tx = symbol;
-    break;
-
-  case 9:
-  case 10:
-    state = 1;
-    break;
-
-  default:
-    if (byte_tx & mask)
-    {
-      state = 1;
-    }
-    else
-    {
-      state = 0;
-    }
-
-    mask <<= 1;
-  }
-
-  HAL_GPIO_WritePin(SOFT_UART_TX_GPIO_Port, SOFT_UART_TX_Pin, state);
-
-  cycle_counter++;
-
-  if (cycle_counter > 10)
-  {
-    cycle_counter = 0;
-    mask = 1;
-    return 1;
-  }
-  else
-  {
-    return 0;
-  }
 }
 
 /**
@@ -269,7 +221,8 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -279,6 +232,44 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
+
 }
 
 /**
@@ -302,7 +293,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 625; // Bitrate 115200
+  htim2.Init.Period = 30000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV4;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -323,6 +314,7 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
 }
 
 /**
@@ -356,6 +348,34 @@ static void MX_USART1_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  * Configure DMA for memory to memory transfers
+  *   hdma_memtomem_dma1_channel1
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* Configure DMA request hdma_memtomem_dma1_channel1 on DMA1_Channel1 */
+  hdma_memtomem_dma1_channel1.Instance = DMA1_Channel1;
+  hdma_memtomem_dma1_channel1.Init.Direction = DMA_MEMORY_TO_MEMORY;
+  hdma_memtomem_dma1_channel1.Init.PeriphInc = DMA_PINC_ENABLE;
+  hdma_memtomem_dma1_channel1.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_memtomem_dma1_channel1.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+  hdma_memtomem_dma1_channel1.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+  hdma_memtomem_dma1_channel1.Init.Mode = DMA_NORMAL;
+  hdma_memtomem_dma1_channel1.Init.Priority = DMA_PRIORITY_LOW;
+  if (HAL_DMA_Init(&hdma_memtomem_dma1_channel1) != HAL_OK)
+  {
+    Error_Handler( );
+  }
+
 }
 
 /**
@@ -370,8 +390,8 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
@@ -399,9 +419,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(SOFT_UART_RX_GPIO_Port, &GPIO_InitStruct);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -420,7 +437,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
