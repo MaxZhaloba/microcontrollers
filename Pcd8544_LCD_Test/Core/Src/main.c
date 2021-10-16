@@ -22,6 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "string.h"
+#include "image.h"
 
 /* USER CODE END Includes */
 
@@ -120,7 +122,9 @@ void lcd_extended_commands_on()
 void lcd_extended_commands_off()
 {
 	// Power on; horizontal addressing; extended instruction set control off (H=0)
-	lcd_command(0x20);
+//  lcd_command(0x20);
+	// Power on; vertical addressing; extended instruction set control off (H=0)
+	lcd_command(0x22);
 }
 
 void lcd_basic_command(uint8_t command)
@@ -167,6 +171,24 @@ void lcd_display_inverted_mode()
 	lcd_basic_command(0x0D);
 }
 
+// X in range [0; 83]
+void lcd_set_x(uint8_t x)
+{
+	lcd_basic_command(0x80 | x);
+}
+
+// Y in range [0; 5]
+void lcd_set_y(uint8_t y)
+{
+	lcd_basic_command(0x40 | y);
+}
+
+void set_position(uint8_t x, uint8_t y)
+{
+	lcd_set_x(x);
+	lcd_set_y(y);
+}
+
 void lcd_fill(uint8_t pattern)
 {
 	for (int i=0; i<LCD_RAM_SIZE; i++)
@@ -200,6 +222,29 @@ void lcd_test(uint32_t delay)
 	lcd_display_all_segments();
 	HAL_Delay(delay);
 	lcd_display_normal_mode();
+}
+
+void transpond_symbol_8x5(uint8_t *original_symbol, uint8_t *new_symbol)
+{
+	uint8_t new_width = 5;
+	uint8_t new_height = 8;
+
+	for (int i=0; i<new_height; i++)
+	{
+		uint8_t mask = 0x80;
+		for (int j=0; j<new_width; j++)
+		{
+			new_symbol[i] |= original_symbol[j] & mask;
+			mask >>= 1;
+		}
+	}
+}
+
+uint8_t reverse(uint8_t b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
 }
 
 /* USER CODE END 0 */
@@ -243,13 +288,22 @@ int main(void)
 
   lcd_init();
   lcd_test(500);
-  lcd_fill(0xF0);
+//  lcd_fill(0xF0);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint8_t i=1;
+
+  lcd_clear();
+  HAL_Delay(500);
+
+  for (int i=0; i<LCD_RAM_SIZE; i++)
+  {
+	  lcd_data(~reverse(image_data_Image[i]));
+  }
+
+  int i=0;
 
   while (1)
   {
@@ -259,10 +313,7 @@ int main(void)
 //	  lcd_fill(0x0F);
 
 //	  uint8_t pattern = i++%2 == 1 ? 0xFF : 0;
-
-	  lcd_data(i);
-
-	  i++;
+//	  i++;
 
     /* USER CODE END WHILE */
 
