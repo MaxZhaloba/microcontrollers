@@ -74,16 +74,18 @@ void led_toggle()
 // 84 px wide * 6 rows
 #define LCD_RAM_SIZE 504
 
-void lcd_send(uint8_t byte)
+void lcd_send_byte(uint8_t byte)
 {
 	HAL_SPI_Transmit(&hspi1, &byte, sizeof(byte), 10);
 }
 
+// Enable the command mode
 void lcd_command_enable()
 {
 	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
 }
 
+// Enable the data mode
 void lcd_command_disable()
 {
 	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
@@ -92,19 +94,20 @@ void lcd_command_disable()
 void lcd_command(uint8_t byte)
 {
 	lcd_command_enable();
-	lcd_send(byte);
+	lcd_send_byte(byte);
 	lcd_command_disable();
 }
 
 void lcd_data(uint8_t byte)
 {
-	lcd_command_disable();
-	lcd_send(byte);
+	// Assume that data mode is already enabled for bandwidth optimisation
+	lcd_send_byte(byte);
 }
 
 void lcd_reset(){
 	HAL_GPIO_WritePin(Reset_GPIO_Port, Reset_Pin, GPIO_PIN_RESET);
-	lcd_send(0);
+	// Generate at least 1 clock impulse
+	lcd_send_byte(0);
 	HAL_GPIO_WritePin(Reset_GPIO_Port, Reset_Pin, GPIO_PIN_SET);
 }
 
@@ -246,12 +249,21 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint8_t i=1;
+
   while (1)
   {
-	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	  HAL_Delay(500);
+//	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+//	  HAL_Delay(500);
 //	  lcd_fill(0xF0);
 //	  lcd_fill(0x0F);
+
+//	  uint8_t pattern = i++%2 == 1 ? 0xFF : 0;
+
+	  lcd_data(i);
+
+	  i++;
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -277,7 +289,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL8;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -320,7 +332,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
