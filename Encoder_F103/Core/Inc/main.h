@@ -71,6 +71,7 @@ void Error_Handler(void);
 #define CLK_EXTI_IRQn EXTI15_10_IRQn
 #define DT_Pin GPIO_PIN_13
 #define DT_GPIO_Port GPIOB
+#define DT_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
