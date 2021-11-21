@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
+ * All rights reserved.</center></h2>
+ *
+ * This software component is licensed by ST under BSD 3-Clause license,
+ * the "License"; You may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at:
+ *                        opensource.org/licenses/BSD-3-Clause
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -58,112 +58,42 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN 0 */
 
 int display_value = -123;
-int8_t encoder_state = 0;
+
+void update_encoder_state()
+{
+	uint8_t pin_a = HAL_GPIO_ReadPin(ENC_PIN_A_GPIO_Port, ENC_PIN_A_Pin);
+	uint8_t pin_b = HAL_GPIO_ReadPin(ENC_PIN_B_GPIO_Port, ENC_PIN_B_Pin);
+
+	int8_t increment = 0;
+
+	if (pin_a && !pin_b)
+	{
+		increment = 1;
+	}
+	else if (!pin_a && pin_b)
+	{
+		increment = -1;
+	}
+
+	if (increment)
+	{
+		display_value += increment;
+
+//		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+	}
+}
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	uint8_t clk = HAL_GPIO_ReadPin(DT_GPIO_Port, CLK_Pin);
-	uint8_t dt  = HAL_GPIO_ReadPin(DT_GPIO_Port, DT_Pin);
-
-	switch(encoder_state)
-	{
-	case 0:
-		if (clk && !dt)
-		{
-			encoder_state++;
-		}
-
-		if (!clk && dt)
-		{
-			encoder_state--;
-		}
-		break;
-
-	case 1:
-		if (!clk && !dt && GPIO_Pin == CLK_Pin)
-		{
-			encoder_state++;
-		}
-		break;
-
-	case -1:
-		if (!clk && !dt && GPIO_Pin == DT_Pin)
-		{
-			encoder_state--;
-		}
-		break;
-
-	case 2:
-		if (clk && !dt && GPIO_Pin == CLK_Pin)
-		{
-			encoder_state++;
-		}
-		break;
-
-	case -2:
-		if (!clk && dt && GPIO_Pin == DT_Pin)
-		{
-			encoder_state--;
-		}
-		break;
-
-	case 3:
-		if (clk && dt && GPIO_Pin == CLK_Pin)
-		{
-			encoder_state++;
-		}
-		break;
-
-	case -3:
-		if (!clk && !dt && GPIO_Pin == DT_Pin)
-		{
-			encoder_state--;
-		}
-		break;
-	}
-
-//	uint8_t prev_state = encoder_state;
-
-//	if (prev_state != encoder_state)
-//	{
-//		prev_state = encoder_state;
-//		if (encoder_state == 4 || encoder_state == -4)
-//		{
-//			HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-//		}
-//	}
-
-	if (encoder_state == 4 || encoder_state == -4)
-	{
-		int increment = encoder_state / 4;
-		encoder_state = 0;
-
-		display_value += increment;
-
-		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-	} else
-	{
-		HAL_TIM_Base_Stop(&htim4);
-		HAL_TIM_Base_Start_IT(&htim4);
-	}
+	HAL_TIM_Base_Start_IT(&htim4);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim == &htim4)
 	{
-//		int increment = 0;
-//
-//		if (encoder_state == 4 || encoder_state == -4)
-//		{
-//			increment = encoder_state / 4;
-//
-//			display_value += increment;
-//		}
-
-		//display_int(encoder_state);
-
-		encoder_state = 0;
+		HAL_TIM_Base_Stop_IT(&htim4);
+		update_encoder_state();
 	}
 }
 
@@ -205,138 +135,144 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 #define CHAR_MINUS (SEG_G)
 #define CHAR_UNDERSCORE (SEG_D)
 
-
 void cs_disable()
 {
-  HAL_GPIO_WritePin(GPIOA, CS_PIN, GPIO_PIN_SET);
-  // HAL_Delay(10);
+	HAL_GPIO_WritePin(GPIOA, CS_PIN, GPIO_PIN_SET);
+	// HAL_Delay(10);
 }
 
 void cs_enable()
 {
-  HAL_GPIO_WritePin(GPIOA, CS_PIN, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, CS_PIN, GPIO_PIN_RESET);
 }
 
 void clock_high()
 {
-  HAL_GPIO_WritePin(GPIOA, CLOCK_PIN, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, CLOCK_PIN, GPIO_PIN_SET);
 }
 
 void clock_low()
 {
-  HAL_GPIO_WritePin(GPIOA, CLOCK_PIN, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, CLOCK_PIN, GPIO_PIN_RESET);
 }
 
 void send_word(uint16_t word)
 {
-  uint16_t mask = 1 << 15;
+	uint16_t mask = 1 << 15;
 
-  // HAL_Delay(1);
+	// HAL_Delay(1);
 
-  for (int i = 0; i < 16; i++)
-  {
-    uint16_t bit = word & mask;
-    mask >>= 1;
+	for (int i = 0; i < 16; i++)
+	{
+		uint16_t bit = word & mask;
+		mask >>= 1;
 
-    clock_low();
+		clock_low();
 
-    HAL_GPIO_WritePin(GPIOA, DATA_PIN, bit ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOA, DATA_PIN, bit ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
-    clock_high();
-  }
+		clock_high();
+	}
 
-  clock_low();
-  // HAL_Delay(1);
-  HAL_GPIO_WritePin(GPIOA, DATA_PIN, GPIO_PIN_RESET);
+	clock_low();
+	// HAL_Delay(1);
+	HAL_GPIO_WritePin(GPIOA, DATA_PIN, GPIO_PIN_RESET);
 }
 
 void send_command(uint16_t command)
 {
-  cs_enable();
-  send_word(command);
-  cs_disable();
+	cs_enable();
+	send_word(command);
+	cs_disable();
 }
 
 void set_no_decode_mode()
 {
-  send_command(0x0900);
+	send_command(0x0900);
 }
 
-void switch_on(){
-  send_command(0x0B0F); // Set scan limit to display all 8 segments
-  set_no_decode_mode();
-  send_command(0x0C01); // Switch to normal operation mode
+void switch_on()
+{
+	send_command(0x0B0F); // Set scan limit to display all 8 segments
+	set_no_decode_mode();
+	send_command(0x0C01); // Switch to normal operation mode
 }
 
-void switch_off(){
-  send_command(0x0C00); // Switch to shutdown mode
+void switch_off()
+{
+	send_command(0x0C00); // Switch to shutdown mode
 }
 
 void brightness(uint8_t level)
 {
-  send_command(0x0A00 + level);
+	send_command(0x0A00 + level);
 }
 
 void test_on()
 {
-  send_command(0x0F01);
+	send_command(0x0F01);
 }
 
 void test_off()
 {
-  send_command(0x0F00); // Switch to shutdown mode
+	send_command(0x0F00); // Switch to shutdown mode
 }
 
 void send_character(uint8_t position, uint8_t character)
 {
-  uint16_t address = (position+1)<<8;
-  send_command(address | character);
+	uint16_t address = (position + 1) << 8;
+	send_command(address | character);
 }
 
 // Data is 8-byte array
 void fill(uint8_t data[])
 {
-  for (uint16_t i=0; i<8; i++)
-  {
-    // Swap the segments positioned from right to left on the PCB
-    send_character(7-i, data[i]);
-  }
+	for (uint16_t i = 0; i < 8; i++)
+	{
+		// Swap the segments positioned from right to left on the PCB
+		send_character(7 - i, data[i]);
+	}
 }
 
 void clear()
 {
-  for (int i=0; i<8; i++)
-  {
-    send_character(i, 0);
-  }
+	for (int i = 0; i < 8; i++)
+	{
+		send_character(i, 0);
+	}
 }
 
 // Duration is set in ms
 void internal_test(uint32_t display_duration)
 {
-  test_on();
-  HAL_Delay(display_duration);
-  test_off();
+	test_on();
+	HAL_Delay(display_duration);
+	test_off();
 }
 
 void display_custom_test_data()
 {
-  uint8_t data[] = {CHAR_0|SEG_DOT, CHAR_1, CHAR_2, CHAR_3, CHAR_4, CHAR_5, CHAR_6, CHAR_7};
-  //uint8_t data[] = {CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_8, CHAR_9};
-  fill(data);
+	uint8_t data[] =
+	{ CHAR_0 | SEG_DOT, CHAR_1, CHAR_2, CHAR_3, CHAR_4, CHAR_5,
+	CHAR_6, CHAR_7 };
+	//uint8_t data[] = {CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_0, CHAR_8, CHAR_9};
+	fill(data);
 }
 
 // Duration is set in ms
 void custom_test(uint32_t display_duration)
 {
-  display_custom_test_data();
-  HAL_Delay(display_duration);
-  clear();
+	display_custom_test_data();
+	HAL_Delay(display_duration);
+	clear();
 }
 
-void display_hello(){
-  uint8_t data[] = {CHAR_H, CHAR_E, CHAR_L, CHAR_L, CHAR_O, CHAR_SPACE, CHAR_SPACE, CHAR_SPACE};
-  fill(data);
+void display_hello()
+{
+	uint8_t data[] =
+	{ CHAR_H, CHAR_E, CHAR_L, CHAR_L, CHAR_O, CHAR_SPACE,
+	CHAR_SPACE, CHAR_SPACE };
+	fill(data);
 }
 
 void convert_int_to_8_digits(int number, uint8_t *buffer)
@@ -346,7 +282,7 @@ void convert_int_to_8_digits(int number, uint8_t *buffer)
 
 	int abs_number = abs(number);
 
-	for (uint8_t i=0; i<size; i++)
+	for (uint8_t i = 0; i < size; i++)
 	{
 		uint8_t digit = abs_number % arithmetic_base;
 		abs_number /= arithmetic_base;
@@ -358,7 +294,9 @@ void convert_int_to_8_digits(int number, uint8_t *buffer)
 uint8_t convert_digit_to_symbol(uint8_t digit)
 {
 	const uint8_t arithmetic_base = 10;
-	const uint8_t symbols[] = {CHAR_0, CHAR_1, CHAR_2, CHAR_3, CHAR_4, CHAR_5, CHAR_6, CHAR_7, CHAR_8, CHAR_9};
+	const uint8_t symbols[] =
+	{ CHAR_0, CHAR_1, CHAR_2, CHAR_3, CHAR_4, CHAR_5,
+	CHAR_6, CHAR_7, CHAR_8, CHAR_9 };
 
 	uint8_t symbol = CHAR_UNDERSCORE; // For digits greater than 9
 
@@ -372,7 +310,7 @@ uint8_t convert_digit_to_symbol(uint8_t digit)
 
 void convert_8_digits_to_symbols(uint8_t *digits_buffer, uint8_t *symbol_buffer)
 {
-	for (uint8_t i=0; i<8; i++)
+	for (uint8_t i = 0; i < 8; i++)
 	{
 		symbol_buffer[i] = convert_digit_to_symbol(digits_buffer[i]);
 	}
@@ -382,7 +320,7 @@ void specify_sign(int number, uint8_t *symbol_buffer, int size)
 {
 	uint8_t *first_space;
 
-	for (uint8_t i=0; i<size-1; i++)
+	for (uint8_t i = 0; i < size - 1; i++)
 	{
 		first_space = symbol_buffer + i;
 
@@ -413,18 +351,18 @@ void convert_int_to_8_symbols(int n, uint8_t *symbol_buffer)
 
 void clear_leading_zeroes(uint8_t *symbol_buffer, int size)
 {
-	for (int i=0; i<size-1; i++)
+	for (int i = 0; i < size - 1; i++)
 	{
 		if (symbol_buffer[i] == CHAR_0)
 		{
 			symbol_buffer[i] = CHAR_SPACE;
-		} else
+		}
+		else
 		{
 			break;
 		}
 	}
 }
-
 
 void display_int(int n)
 {
@@ -473,25 +411,25 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  internal_test(500);
-  clear();
+	internal_test(500);
+	clear();
 
-  brightness(0);
-  switch_on();
+	brightness(0);
+	switch_on();
 
-  custom_test(500);
-  clear();
-  HAL_Delay(500);
+	custom_test(500);
+	clear();
+	HAL_Delay(500);
 
-  display_hello();
-  HAL_Delay(500);
-  clear();
+	display_hello();
+	HAL_Delay(500);
+	clear();
 
 //  HAL_TIMEx_OnePulseN_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim4);
+//  HAL_TIM_Base_Start_IT(&htim4);
 
-  while (1)
-  {
+	while (1)
+	{
 //	  HAL_Delay(delay);
 //	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
@@ -501,7 +439,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+	}
   /* USER CODE END 3 */
 }
 
@@ -564,7 +502,7 @@ static void MX_TIM4_Init(void)
   htim4.Instance = TIM4;
   htim4.Init.Prescaler = 36000-1;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 200-1;
+  htim4.Init.Period = 2-1;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -627,9 +565,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : CLK_Pin DT_Pin */
-  GPIO_InitStruct.Pin = CLK_Pin|DT_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+  /*Configure GPIO pins : ENC_PIN_A_Pin ENC_PIN_B_Pin */
+  GPIO_InitStruct.Pin = ENC_PIN_A_Pin|ENC_PIN_B_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -650,11 +588,11 @@ static void MX_GPIO_Init(void)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 

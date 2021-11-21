@@ -66,12 +66,12 @@ void Error_Handler(void);
 #define CS_GPIO_Port GPIOA
 #define Data_Pin GPIO_PIN_5
 #define Data_GPIO_Port GPIOA
-#define CLK_Pin GPIO_PIN_12
-#define CLK_GPIO_Port GPIOB
-#define CLK_EXTI_IRQn EXTI15_10_IRQn
-#define DT_Pin GPIO_PIN_13
-#define DT_GPIO_Port GPIOB
-#define DT_EXTI_IRQn EXTI15_10_IRQn
+#define ENC_PIN_A_Pin GPIO_PIN_12
+#define ENC_PIN_A_GPIO_Port GPIOB
+#define ENC_PIN_A_EXTI_IRQn EXTI15_10_IRQn
+#define ENC_PIN_B_Pin GPIO_PIN_13
+#define ENC_PIN_B_GPIO_Port GPIOB
+#define ENC_PIN_B_EXTI_IRQn EXTI15_10_IRQn
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
