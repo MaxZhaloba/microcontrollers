@@ -58,33 +58,26 @@ static void MX_TIM4_Init(void);
 /* USER CODE BEGIN 0 */
 
 int display_value = -123;
+int8_t encoder_state = 0;
 
 void update_encoder_state()
 {
 	uint8_t pin_a = HAL_GPIO_ReadPin(ENC_PIN_A_GPIO_Port, ENC_PIN_A_Pin);
 	uint8_t pin_b = HAL_GPIO_ReadPin(ENC_PIN_B_GPIO_Port, ENC_PIN_B_Pin);
 
-	int8_t increment = 0;
-
-	if (pin_a && !pin_b)
+	if (pin_a && !pin_b && !encoder_state)
 	{
-		increment = 1;
+		encoder_state = 1;
 	}
-	else if (!pin_a && pin_b)
+	else if (!pin_a && pin_b && !encoder_state)
 	{
-		increment = -1;
-	}
-
-	if (increment)
-	{
-		display_value += increment;
-
-//		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		encoder_state = -1;
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	update_encoder_state();
 	HAL_TIM_Base_Start_IT(&htim4);
 }
 
@@ -92,8 +85,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim == &htim4)
 	{
-		HAL_TIM_Base_Stop_IT(&htim4);
 		update_encoder_state();
+
+		HAL_TIM_Base_Stop_IT(&htim4);
+
+		if (encoder_state)
+		{
+			display_value += encoder_state;
+
+	//		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+		}
+
+		encoder_state = 0;
 	}
 }
 
