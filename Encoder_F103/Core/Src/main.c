@@ -77,26 +77,37 @@ void update_encoder_state()
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	update_encoder_state();
+//	update_encoder_state();
+//	HAL_TIM_Base_Start_IT(&htim4);
+//	GPIO_PinState button_state = HAL_GPIO_ReadPin(ENC_PIN_A_GPIO_Port, ENC_PIN_A_Pin);
+
+//	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, button_state);
+
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+
+	HAL_TIM_Base_Stop_IT(&htim4);
+	TIM4->CNT = 800;
+
+	HAL_GPIO_WritePin(Debug2_GPIO_Port, Debug2_Pin, GPIO_PIN_SET);
 	HAL_TIM_Base_Start_IT(&htim4);
+
+	HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim == &htim4)
 	{
-		update_encoder_state();
+//		update_encoder_state();
 
+		HAL_GPIO_WritePin(Debug2_GPIO_Port, Debug2_Pin, GPIO_PIN_RESET);
 		HAL_TIM_Base_Stop_IT(&htim4);
 
-		if (encoder_state)
-		{
-			display_value += encoder_state;
-
-	//		HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
-		}
-
-		encoder_state = 0;
+//		NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
+		HAL_NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
+		HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 	}
 }
 
@@ -414,7 +425,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-	internal_test(500);
+/*	internal_test(500);
 	clear();
 
 	brightness(0);
@@ -426,7 +437,7 @@ int main(void)
 
 	display_hello();
 	HAL_Delay(500);
-	clear();
+	clear();*/
 
 //  HAL_TIMEx_OnePulseN_Start_IT(&htim4);
 //  HAL_TIM_Base_Start_IT(&htim4);
@@ -436,7 +447,7 @@ int main(void)
 //	  HAL_Delay(delay);
 //	  HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
 
-	  display_int(display_value);
+//	  display_int(display_value);
 //	  HAL_Delay(500);
 
     /* USER CODE END WHILE */
@@ -503,9 +514,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 36000-1;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 2-1;
+  htim4.Init.Prescaler = 36-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_DOWN;
+  htim4.Init.Period = 4000;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -554,6 +565,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, Clock_Pin|CS_Pin|Data_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, Debug1_Pin|Debug2_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -570,8 +584,15 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : ENC_PIN_A_Pin ENC_PIN_B_Pin */
   GPIO_InitStruct.Pin = ENC_PIN_A_Pin|ENC_PIN_B_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Debug1_Pin Debug2_Pin */
+  GPIO_InitStruct.Pin = Debug1_Pin|Debug2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
